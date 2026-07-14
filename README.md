@@ -199,7 +199,7 @@ http://127.0.0.1:5000
 
 ```
 <!-- ডেস্কটপ ভিউ -->
-![Dashboard Desktop View](https://drive.google.com/file/d/1Vx_CcaX83DYO_rnnO46pDeRkoWZ-jDb7/view?usp=drive_link)
+![Dashboard Desktop View](https://www.jagannath.org/blog/wp-content/uploads/2021/02/Picture1.png)
 
 <!-- মোবাইল ভিউ -->
 ![Dashboard Mobile View](screenshots/mobile.png)
