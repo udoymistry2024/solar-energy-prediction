@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Energy Predictor — সোলার এনার্জি প্রেডিক্টর</title>
+    <meta name="description" content="আবহাওয়া ডেটা দিয়ে সোলার এনার্জি উৎপাদন প্রেডিক্ট করুন। AI-powered Solar Energy Prediction Dashboard.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ===== DESIGN TOKENS ===== */
+        :root {
+            --bg-deep: #050a1a;
+            --bg-surface: rgba(15, 23, 42, 0.55);
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --bg-input: rgba(255, 255, 255, 0.06);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(251, 191, 36, 0.25);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-solar: #fbbf24;
+            --accent-solar-light: #fde68a;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #22d3ee;
+            --accent-emerald: #34d399;
+            --accent-rose: #fb7185;
+            --radius-sm: 10px;
+            --radius-md: 14px;
+            --radius-lg: 22px;
+            --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ===== RESET ===== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text-primary);
+            background: var(--bg-deep);
+            line-height: 1.5;
+        }
+
+        /* ===== DESKTOP: FULL VIEWPORT, NO SCROLL ===== */
+        .app-shell {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ===== ANIMATED BACKGROUND ===== */
+        .bg-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bg-canvas::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            left: -20%;
+            width: 60vw;
+            height: 60vw;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.07) 0%, transparent 70%);
+            animation: orbFloat1 18s ease-in-out infinite;
+        }
+
+        .bg-canvas::after {
+            content: '';
+            position: absolute;
+            bottom: -25%;
+            right: -15%;
+            width: 55vw;
+            height: 55vw;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+            animation: orbFloat2 22s ease-in-out infinite;
+        }
+
+        .bg-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 50px 50px;
+            mask-image: radial-gradient(ellipse 70% 50% at 50% 40%, black 20%, transparent 100%);
+        }
+
+        @keyframes orbFloat1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(6%, 10%) scale(1.04); }
+        }
+        @keyframes orbFloat2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-8%, -6%) scale(1.06); }
+        }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            position: relative;
+            z-index: 10;
+            padding: 10px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(5, 10, 26, 0.65);
+            backdrop-filter: blur(16px) saturate(1.4);
+            border-bottom: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent-solar), #f97316);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 3px 12px rgba(251, 191, 36, 0.25);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 3px 12px rgba(251, 191, 36, 0.25); }
+            50% { box-shadow: 0 3px 20px rgba(251, 191, 36, 0.4); }
+        }
+
+        .nav-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .nav-title small {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .nav-badge {
+            padding: 5px 12px;
+            border-radius: 100px;
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            color: var(--accent-emerald);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            animation: pulseGreen 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGreen {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.5); }
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .main-area {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            padding: 24px 36px;
+            align-items: stretch;
+            min-height: 0; /* crucial for flexbox children */
+        }
+
+        /* ===== LEFT COLUMN ===== */
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 20px;
+            animation: fadeInLeft 0.7s ease-out;
+        }
+
+        @keyframes fadeInLeft {
+            from { opacity: 0; transform: translateX(-24px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 14px;
+            border-radius: 100px;
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.03));
+            border: 1px solid rgba(251, 191, 36, 0.15);
+            width: fit-content;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--accent-solar);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .hero-tag .sun { animation: rotateSun 6s linear infinite; display: inline-block; }
+        @keyframes rotateSun { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .hero-heading {
+            font-size: clamp(1.6rem, 2.8vw, 2.6rem);
+            font-weight: 900;
+            line-height: 1.12;
+            letter-spacing: -0.03em;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--accent-solar), var(--accent-solar-light), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            max-width: 480px;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .stat-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            backdrop-filter: blur(8px);
+            transition: var(--transition-smooth);
+        }
+
+        .stat-chip:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+
+        .stat-icon.train { background: rgba(251, 191, 36, 0.12); }
+        .stat-icon.test { background: rgba(59, 130, 246, 0.12); }
+        .stat-icon.rmse { background: rgba(251, 113, 133, 0.12); }
+        .stat-icon.r2 { background: rgba(52, 211, 153, 0.12); }
+
+        .stat-label {
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Model Performance Panel */
+        .model-perf {
+            padding: 16px 18px;
+            border-radius: var(--radius-md);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-subtle);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .model-perf::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-emerald), var(--accent-blue), var(--accent-solar));
+            opacity: 0.6;
+        }
+
+        .perf-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .perf-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .perf-item {
+            text-align: center;
+            padding: 8px 4px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: var(--transition-smooth);
+        }
+
+        .perf-item:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .perf-num {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 2px;
+        }
+
+        .perf-num.green { color: var(--accent-emerald); }
+        .perf-num.blue { color: var(--accent-blue); }
+        .perf-num.amber { color: var(--accent-solar); }
+        .perf-num.rose { color: var(--accent-rose); }
+
+        .perf-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .perf-note {
+            margin-top: 10px;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            padding: 8px 10px;
+            background: rgba(52, 211, 153, 0.04);
+            border-radius: 8px;
+            border-left: 2px solid rgba(52, 211, 153, 0.3);
+        }
+
+        .perf-note strong {
+            color: var(--accent-emerald);
+        }
+
+        /* ===== RIGHT COLUMN: FORM ===== */
+        .right-col {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeInRight 0.7s ease-out 0.1s both;
+        }
+
+        @keyframes fadeInRight {
+            from { opacity: 0; transform: translateX(24px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .form-card {
+            position: relative;
+            width: 100%;
+            max-width: 520px;
+            padding: 28px 28px 24px;
+            border-radius: var(--radius-lg);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            backdrop-filter: blur(24px) saturate(1.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 40px rgba(251, 191, 36, 0.04);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-solar), var(--accent-blue), var(--accent-cyan), var(--accent-solar));
+            background-size: 300% 100%;
+            animation: shimmerBar 4s linear infinite;
+        }
+
+        @keyframes shimmerBar {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        .form-header {
+            margin-bottom: 18px;
+        }
+
+        .form-header h2 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-header p {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+            flex: 1;
+            align-content: start;
+        }
+
+        .field-group { display: flex; flex-direction: column; gap: 4px; }
+
+        .field-group label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: capitalize;
+            letter-spacing: 0.02em;
+            padding-left: 2px;
+        }
+
+        .field-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.84rem;
+            font-family: inherit;
+            font-weight: 500;
+            transition: var(--transition-smooth);
+            outline: none;
+        }
+
+        .field-group input::placeholder { color: var(--text-muted); font-weight: 400; font-size: 0.78rem; }
+        .field-group input:hover { border-color: rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.08); }
+
+        .field-group input:focus {
+            border-color: var(--accent-solar);
+            background: rgba(251, 191, 36, 0.04);
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.08);
+        }
+
+        /* Submit Button */
+        .btn-predict {
+            position: relative;
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0a0a0a;
+            cursor: pointer;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--accent-solar), #f97316, var(--accent-solar-light));
+            background-size: 200% 200%;
+            animation: gradShift 3s ease-in-out infinite;
+            box-shadow: 0 6px 24px rgba(251, 191, 36, 0.2);
+            transition: var(--transition-smooth);
+            letter-spacing: 0.02em;
+            flex-shrink: 0;
+        }
+
+        @keyframes gradShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 32px rgba(251, 191, 36, 0.3);
+        }
+
+        .btn-predict:active { transform: translateY(0); }
+
+        .btn-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-predict::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.2) 50%, transparent 60%);
+            background-size: 250% 250%;
+            animation: btnShine 3s ease-in-out infinite;
+        }
+
+        @keyframes btnShine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -50% 0; }
+        }
+
+        /* Result */
+        .result-box {
+            margin-top: 14px;
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
+            animation: resultPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            flex-shrink: 0;
+        }
+
+        .result-box.success {
+            background: rgba(52, 211, 153, 0.08);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            color: var(--accent-emerald);
+        }
+
+        .result-box.error {
+            background: rgba(251, 113, 133, 0.08);
+            border: 1px solid rgba(251, 113, 133, 0.2);
+            color: var(--accent-rose);
+        }
+
+        @keyframes resultPop {
+            from { opacity: 0; transform: translateY(8px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .result-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .result-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+        /* ===== FOOTER ===== */
+        .app-footer {
+            position: relative;
+            z-index: 1;
+            padding: 10px 28px;
+            text-align: center;
+            border-top: 1px solid var(--border-subtle);
+            background: rgba(5, 10, 26, 0.5);
+            flex-shrink: 0;
+        }
+
+        .footer-text {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .footer-text .heart {
+            color: var(--accent-rose);
+            animation: heartBeat 1.5s ease-in-out infinite;
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: scale(1); }
+            15% { transform: scale(1.25); }
+            30% { transform: scale(1); }
+        }
+
+        /* ===== FLOATING PARTICLES ===== */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            animation: particleUp linear infinite;
+        }
+
+        @keyframes particleUp {
+            0% { opacity: 0; transform: translateY(100vh) scale(0); }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+        }
+
+        /* ===== SCROLLBAR (hidden on desktop) ===== */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        /* Hide number input spin buttons */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        ::selection {
+            background: rgba(251, 191, 36, 0.25);
+            color: var(--text-primary);
+        }
+
+        /* ==========================================================
+           RESPONSIVE: MOBILE (≤ 860px) — allow scrolling
+           ========================================================== */
+        @media (max-width: 860px) {
+            .app-shell {
+                height: auto;
+                min-height: 100vh;
+                overflow: auto;
+            }
+
+            .main-area {
+                grid-template-columns: 1fr;
+                gap: 24px;
+                padding: 24px 18px;
+                align-items: start;
+            }
+
+            .left-col {
+                gap: 16px;
+            }
+
+            .hero-heading {
+                font-size: clamp(1.5rem, 5.5vw, 2.2rem);
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .stat-chip {
+                padding: 8px 10px;
+                gap: 6px;
+            }
+
+            .stat-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 0.85rem;
+            }
+
+            .stat-value { font-size: 0.8rem; }
+            .stat-label { font-size: 0.58rem; }
+
+            .model-perf { padding: 14px 14px; }
+            .perf-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+            .perf-num { font-size: 1rem; }
+            .perf-label { font-size: 0.55rem; }
+            .perf-note { font-size: 0.64rem; }
+
+            .form-card {
+                padding: 22px 18px 20px;
+                max-width: 100%;
+            }
+
+            .form-grid { gap: 10px; }
+        }
+
+        /* ===== SMALL PHONE (≤ 480px) ===== */
+        @media (max-width: 480px) {
+            .navbar { padding: 10px 14px; }
+            .nav-badge { display: none; }
+            .nav-logo { width: 30px; height: 30px; font-size: 0.95rem; }
+            .nav-title { font-size: 0.9rem; }
+            .nav-title small { font-size: 0.58rem; }
+
+            .main-area { padding: 18px 12px; gap: 18px; }
+
+            .hero-heading { font-size: 1.35rem; }
+            .hero-desc { font-size: 0.82rem; }
+
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+
+            .perf-grid { grid-template-columns: repeat(2, 1fr); }
+            .perf-num { font-size: 0.95rem; }
+            .perf-note { font-size: 0.62rem; padding: 6px 8px; }
+
+            .form-grid { grid-template-columns: 1fr; gap: 10px; }
+            .form-card { padding: 18px 14px 16px; border-radius: var(--radius-md); }
+
+            .btn-predict { padding: 12px 16px; font-size: 0.88rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Animated Background -->
+    <div class="bg-canvas" aria-hidden="true">
+        <div class="bg-grid"></div>
+    </div>
+
+    <div class="app-shell">
+
+        <!-- ===== NAVBAR ===== -->
+        <nav class="navbar" id="main-nav">
+            <div class="nav-brand">
+                <div class="nav-logo" aria-hidden="true">☀️</div>
+                <div class="nav-title">
+                    Solar Predictor
+                    <small>AI-Powered Dashboard</small>
+                </div>
+            </div>
+            <div class="nav-badge">Model Active</div>
+        </nav>
+
+        <!-- ===== MAIN: TWO-COLUMN FULL VIEWPORT ===== -->
+        <div class="main-area">
+
+            <!-- LEFT COLUMN: Hero + Features -->
+            <div class="left-col">
+                <div class="hero-tag">
+                    <span class="sun">☀️</span> Solar Energy AI
+                </div>
+
+                <h1 class="hero-heading">
+                    সোলার এনার্জি<br>
+                    <span class="gradient-text">প্রেডিকশন ড্যাশবোর্ড</span>
+                </h1>
+
+                <p class="hero-desc">
+                    আবহাওয়া ইনপুটের ওপর ভিত্তি করে XGBoost মেশিন লার্নিং মডেল ব্যবহার করে সোলার শক্তি উৎপাদনের সঠিক পূর্বাভাস নিন।
+                </p>
+
+                <div class="stats-row">
+                    <div class="stat-chip">
+                        <div class="stat-icon train">📈</div>
+                        <div>
+                            <div class="stat-label">Training</div>
+                            <div class="stat-value">94.74%</div>
+                        </div>
+                    </div>
+                    <div class="stat-chip">
+                        <div class="stat-icon test">🎯</div>
+                        <div>
+                            <div class="stat-label">Test</div>
+                            <div class="stat-value">93.58%</div>
+                        </div>
+                    </div>
+                    <div class="stat-chip">
+                        <div class="stat-icon rmse">📉</div>
+                        <div>
+                            <div class="stat-label">RMSE</div>
+                            <div class="stat-value">266 Wh</div>
+                        </div>
+                    </div>
+                    <div class="stat-chip">
+                        <div class="stat-icon r2">✅</div>
+                        <div>
+                            <div class="stat-label">R² Score</div>
+                            <div class="stat-value">0.9358</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Model Performance Panel -->
+                <div class="model-perf">
+                    <div class="perf-title">📊 মডেল পারফরম্যান্স রিপোর্ট</div>
+                    <div class="perf-grid">
+                        <div class="perf-item">
+                            <div class="perf-num amber">94.74%</div>
+                            <div class="perf-label">Train Score</div>
+                        </div>
+                        <div class="perf-item">
+                            <div class="perf-num blue">93.58%</div>
+                            <div class="perf-label">Test Score</div>
+                        </div>
+                        <div class="perf-item">
+                            <div class="perf-num rose">266.05</div>
+                            <div class="perf-label">RMSE (Wh)</div>
+                        </div>
+                        <div class="perf-item">
+                            <div class="perf-num green">0.9358</div>
+                            <div class="perf-label">R² Score</div>
+                        </div>
+                    </div>
+                    <div class="perf-note">
+                        <strong>✅ No Overfitting:</strong> Training ও Test Score-এর পার্থক্য মাত্র ১.১৬% — মডেল অত্যন্ত ব্যালেন্সড ও নির্ভরযোগ্য।
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Form -->
+            <div class="right-col">
+                <div class="form-card" id="predict-form-card">
+                    <div class="form-header">
+                        <h2>📊 প্রেডিকশন ইনপুট দিন</h2>
+                        <p>ফর্ম পূরণ করুন এবং সাবমিট করে প্রেডিক্টেড সোলার এনার্জি দেখুন।</p>
+                    </div>
+
+                    <form action="/predict" method="post" id="prediction-form">
+                        <div class="form-grid">
+                            {% for feature in features %}
+                            <div class="field-group">
+                                <label for="{{ feature }}">{{ feature }}</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    name="{{ feature }}"
+                                    id="{{ feature }}"
+                                    placeholder="{{ feature }} দিন"
+                                    required
+                                >
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn-predict" id="btn-submit">
+                            <span class="btn-content">🚀 Predict Energy</span>
+                        </button>
+                    </form>
+
+                    {% if prediction_text %}
+                    <div class="result-box {% if 'Error' in prediction_text or '❌' in prediction_text %}error{% else %}success{% endif %}" id="result-box">
+                        <div class="result-content">
+                            <span class="result-icon">
+                                {% if 'Error' in prediction_text or '❌' in prediction_text %}⚠️{% else %}✅{% endif %}
+                            </span>
+                            <span>{{ prediction_text }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="app-footer">
+            <p class="footer-text">
+                তৈরি করেছেন <span class="heart">❤️</span> দিয়ে — Solar Energy Predictor © 2026
+            </p>
+        </footer>
+
+    </div>
+
+    <!-- ===== PARTICLES ===== -->
+    <script>
+        (function() {
+            const canvas = document.querySelector('.bg-canvas');
+            const colors = [
+                'rgba(251, 191, 36, 0.3)',
+                'rgba(59, 130, 246, 0.25)',
+                'rgba(34, 211, 238, 0.2)',
+                'rgba(52, 211, 153, 0.25)',
+            ];
+
+            function spawn() {
+                const el = document.createElement('div');
+                el.classList.add('particle');
+                const s = Math.random() * 3.5 + 1.5;
+                const dur = Math.random() * 14 + 10;
+                const delay = Math.random() * 6;
+                const c = colors[Math.floor(Math.random() * colors.length)];
+                el.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;background:${c};box-shadow:0 0 ${s*3}px ${c};animation-duration:${dur}s;animation-delay:${delay}s;`;
+                canvas.appendChild(el);
+                setTimeout(() => el.remove(), (dur + delay) * 1000);
+            }
+
+            for (let i = 0; i < 15; i++) setTimeout(spawn, i * 400);
+            setInterval(spawn, 2000);
+        })();
+
+        // Subtle input focus scale
+        document.querySelectorAll('.field-group input').forEach(inp => {
+            inp.addEventListener('focus', function() {
+                this.parentElement.style.transform = 'scale(1.02)';
+                this.parentElement.style.transition = 'transform 0.2s ease';
+            });
+            inp.addEventListener('blur', function() {
+                this.parentElement.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+
+</body>
+</html>
