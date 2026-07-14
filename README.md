@@ -193,20 +193,6 @@ http://127.0.0.1:5000
 
 ---
 
-## 📸 স্ক্রিনশট (Screenshots)
-
-> স্ক্রিনশট যোগ করুন — ড্যাশবোর্ডের ডেস্কটপ ও মোবাইল ভিউ দেখাতে।
-
-```
-<!-- ডেস্কটপ ভিউ -->
-![Dashboard Desktop View](https://www.jagannath.org/blog/wp-content/uploads/2021/02/Picture1.png)
-
-<!-- মোবাইল ভিউ -->
-![Dashboard Mobile View](screenshots/mobile.png)
-```
-
----
-
 ## 🤝 অবদান রাখুন (Contributing)
 
 এই প্রজেক্টে অবদান রাখতে চাইলে:
